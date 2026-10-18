@@ -40,7 +40,8 @@ is always recoverable.
   appended), an audit report, and the full workspace as JSON.
 - **Optional AI explanations** through a small local FastAPI backend: off by default, opt-in per
   browser session, only the findings you tick are sent, the provider's answer must match a strict
-  schema, and rewrites that add a number, quotation, link or citation are discarded. AI rewrites are
+  schema, and rewrites that add a number, superlative, attribution, quotation, link or citation are
+  discarded. AI rewrites are
   ordinary suggestions you can preview, apply or ignore.
 
 ## Quick start

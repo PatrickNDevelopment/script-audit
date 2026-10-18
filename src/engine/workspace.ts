@@ -4,7 +4,7 @@ import { ID_RE } from './text';
 import { LIMITS, type Workspace } from './types';
 
 // Text must not hold U+0000 or a lone surrogate (JSON and SQLite round trips break on them).
-function storable(s: string): boolean {
+export function isStorableText(s: string): boolean {
   if (s.includes('\u0000')) return false;
   for (let i = 0; i < s.length; i += 1) {
     const c = s.charCodeAt(i);
@@ -18,7 +18,7 @@ function storable(s: string): boolean {
 }
 
 const str = (max: number) =>
-  z.string().max(max).refine(storable, 'contains a NUL character or a broken surrogate pair');
+  z.string().max(max).refine(isStorableText, 'contains a NUL character or a broken surrogate pair');
 const url = z
   .string()
   .max(2000)

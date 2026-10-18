@@ -6,6 +6,7 @@ import {
   current,
   duration,
   formatDuration,
+  isStorableText,
   LIMITS,
   narrationText,
   parseWorkspaceJson,
@@ -86,6 +87,11 @@ function ImportPanel(props: {
             disabled={paste.trim() === ''}
             onClick={() => {
               const { title, text } = splitTitle(paste);
+              if (text.trim() === '') return setErrors(['The pasted text has no script text.']);
+              if (!isStorableText(text) || !isStorableText(title))
+                return setErrors([
+                  'The pasted text contains a NUL character or a broken emoji/surrogate pair; remove it and try again.',
+                ]);
               if (text.length > LIMITS.textChars)
                 return setErrors([
                   `The script is longer than ${LIMITS.textChars.toLocaleString('en-US')} characters.`,

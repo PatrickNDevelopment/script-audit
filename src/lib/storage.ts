@@ -77,6 +77,15 @@ export function loadBackendUrl(): string {
   }
 }
 
+/** True when the user chose a backend address in Settings. */
+export function backendUrlSaved(): boolean {
+  try {
+    return !!local()?.getItem(BACKEND_KEY);
+  } catch {
+    return false;
+  }
+}
+
 export function saveBackendUrl(url: string): void {
   try {
     local()?.setItem(BACKEND_KEY, url);

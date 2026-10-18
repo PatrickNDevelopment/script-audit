@@ -19,7 +19,9 @@ A sentence is an **assertion** when its masked text contains at least one of:
   `the least`, `best`, `worst`, `highest`, `lowest`, `fastest`, `slowest`, `oldest`, `newest`,
   `longest`, `shortest`, `record`, `never`, `always`). Everyday words such as `every`, `all`, `last`
   or a bare `most` are deliberately not triggers: they are rarely checkable and caused false
-  positives in testing;
+  positives in testing. `first` as a discourse marker (a sentence-initial `First,`, `at first`,
+  `first of all`, `first and foremost`, `first things first`, `first off`) orders the telling and is
+  not counted either;
 - an attribution or evidence phrase (`according to`, `studies show`, `research shows`, `scientists`,
   `experts`, `data shows`, `reported`, `found that`, `proved`, `confirmed`).
 
@@ -62,7 +64,7 @@ carry a fix: the app cannot make text true. Coverage = covered assertions / asse
 | `S2 repeated-word`  | a content word (not a stopword, 4+ letters) appears 3+ times within any 40-word window; reported once per window at the 3rd use                                                                      | none                                                                                                                                                                  |
 | `S3 breathless-run` | more than 18 spoken words in a row without any pause punctuation                                                                                                                                     | insert `,` before the conjunction (`and`, `but`, `because`, `which`, `while`, `so`) nearest the middle of the run, if there is one                                    |
 | `S4 pronounce`      | a word not in the glossary that is an acronym (2+ capitals), contains a digit and a letter, or contains a letter outside A-Z/a-z; reported once per word (a possessive `'s` counts as the same word) | none (suggests adding it to the glossary)                                                                                                                             |
-| `S5 double-space`   | two or more spaces between words                                                                                                                                                                     | replace with one space                                                                                                                                                |
+| `S5 double-space`   | two or more spaces between words; the excerpt is the gap with the word on each side, so the key names that gap                                                                                       | replace with one space                                                                                                                                                |
 
 The glossary is `{ term, say }` pairs. Terms found in the script are listed with counts and appear in
 the narration export.

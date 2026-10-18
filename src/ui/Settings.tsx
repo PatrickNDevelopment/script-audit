@@ -1,7 +1,60 @@
 /** Settings (audit thresholds, glossary, backend address) and About. */
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { LIMITS, type GlossaryEntry, type Settings as S } from '../engine';
 import { normalizeBackendUrl } from '../lib/api';
+
+/**
+ * A whole-number field that only saves values inside its range. While typing, intermediate values
+ * (such as "1" on the way to "180") are kept in the field and not clamped; leaving the field puts
+ * back the saved value if the typed one is not valid.
+ */
+export function NumberField(props: {
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  onCommit: (n: number) => void;
+}) {
+  const [text, setText] = useState(String(props.value));
+  const [editing, setEditing] = useState(false);
+  const n = Number(text);
+  const valid = /^\d+$/.test(text.trim()) && n >= props.min && n <= props.max;
+  const shown = editing ? text : String(props.value);
+  const hintId = useId();
+  return (
+    <label>
+      {props.label}
+      <input
+        aria-describedby={editing && !valid ? hintId : undefined}
+        type="number"
+        inputMode="numeric"
+        min={props.min}
+        max={props.max}
+        step={1}
+        value={shown}
+        aria-invalid={editing && !valid}
+        onFocus={() => {
+          setText(String(props.value));
+          setEditing(true);
+        }}
+        onChange={(e) => {
+          const t = e.target.value;
+          setText(t);
+          setEditing(true);
+          const v = Number(t);
+          if (/^\d+$/.test(t.trim()) && v >= props.min && v <= props.max && v !== props.value)
+            props.onCommit(v);
+        }}
+        onBlur={() => setEditing(false)}
+      />
+      {editing && !valid ? (
+        <span id={hintId} className="error-text small">
+          Use a whole number from {props.min} to {props.max}; the saved value is {props.value}.
+        </span>
+      ) : null}
+    </label>
+  );
+}
 
 export function Settings(props: {
   settings: S;
@@ -20,34 +73,20 @@ export function Settings(props: {
     <section aria-labelledby="settings-h">
       <h2 id="settings-h">Settings</h2>
       <div className="card form-grid">
-        <label>
-          Narration speed (words per minute, 100 to 220)
-          <input
-            type="number"
-            min={100}
-            max={220}
-            value={props.settings.wpm}
-            onChange={(e) => {
-              const v = Math.round(Number(e.target.value));
-              if (Number.isFinite(v))
-                props.onSettings({ ...props.settings, wpm: Math.min(220, Math.max(100, v)) });
-            }}
-          />
-        </label>
-        <label>
-          Long sentence limit (words, 12 to 60)
-          <input
-            type="number"
-            min={12}
-            max={60}
-            value={props.settings.maxWords}
-            onChange={(e) => {
-              const v = Math.round(Number(e.target.value));
-              if (Number.isFinite(v))
-                props.onSettings({ ...props.settings, maxWords: Math.min(60, Math.max(12, v)) });
-            }}
-          />
-        </label>
+        <NumberField
+          label="Narration speed (words per minute, 100 to 220)"
+          min={100}
+          max={220}
+          value={props.settings.wpm}
+          onCommit={(wpm) => props.onSettings({ ...props.settings, wpm })}
+        />
+        <NumberField
+          label="Long sentence limit (words, 12 to 60)"
+          min={12}
+          max={60}
+          value={props.settings.maxWords}
+          onCommit={(maxWords) => props.onSettings({ ...props.settings, maxWords })}
+        />
       </div>
 
       <h3>Pronunciation glossary</h3>
@@ -156,8 +195,8 @@ export function About() {
           any platform.
         </li>
         <li>
-          It never invents claims, sources or citations, and AI rewrites that add numbers, quotes,
-          links or citations are discarded.
+          It never invents claims, sources or citations, and AI rewrites that add numbers,
+          superlatives, attributions, quotes, links or citations are discarded.
         </li>
         <li>
           It never changes your script on its own. Approved scripts are locked until you reopen

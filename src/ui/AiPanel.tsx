@@ -10,8 +10,8 @@ import {
   type Revision,
   type Suggestion,
 } from '../engine';
-import { capabilities, explain, type Capabilities } from '../lib/api';
-import { loadOptIn, saveOptIn } from '../lib/storage';
+import { autoCheckBackend, capabilities, explain, type Capabilities } from '../lib/api';
+import { backendUrlSaved, loadOptIn, saveOptIn } from '../lib/storage';
 import { SuggestionPreview } from './Audits';
 
 export function AiPanel(props: {
@@ -37,7 +37,9 @@ export function AiPanel(props: {
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [shown, setShown] = useState<string | null>(null);
 
+  const auto = autoCheckBackend(window.location.hostname, backendUrlSaved());
   useEffect(() => {
+    if (!auto && checkedAt === 0) return;
     let alive = true;
     capabilities(props.backend).then((c) => {
       if (alive) setCaps(c);
@@ -45,7 +47,7 @@ export function AiPanel(props: {
     return () => {
       alive = false;
     };
-  }, [props.backend, checkedAt]);
+  }, [props.backend, checkedAt, auto]);
 
   const valid = selected.filter((k) => props.open.some((f) => f.key === k));
 
@@ -80,7 +82,7 @@ export function AiPanel(props: {
       <div className="row-between">
         <h3 id="ai-h">AI explanations (optional)</h3>
         <button type="button" className="secondary small" onClick={() => setCheckedAt(Date.now())}>
-          Check backend again
+          {!auto && checkedAt === 0 ? 'Check the local backend' : 'Check backend again'}
         </button>
       </div>
       <p className="small muted">
@@ -89,7 +91,13 @@ export function AiPanel(props: {
         are unverified and are never applied automatically. The audits above work without this.
       </p>
       <div data-testid="ai-state" role="status">
-        {caps === null ? <p>Checking the backend…</p> : null}
+        {caps === null && !auto && checkedAt === 0 ? (
+          <p className="notice info">
+            Not checked. This page does not contact your computer on its own. AI explanations need
+            the optional local backend (see the README); everything else works without it.
+          </p>
+        ) : null}
+        {caps === null && (auto || checkedAt !== 0) ? <p>Checking the backend…</p> : null}
         {caps?.kind === 'offline' ? (
           <p className="notice info">
             Backend not reachable. {caps.message} AI explanations are unavailable; everything else
@@ -103,7 +111,8 @@ export function AiPanel(props: {
         ) : null}
         {caps?.kind === 'enabled' ? (
           <p>
-            Available: {caps.provider} / {caps.model} (at most {caps.callsPerHour} calls per hour).
+            Available: {caps.provider} / {caps.model}
+            {caps.callsPerHour > 0 ? ` (at most ${caps.callsPerHour} calls per hour)` : ''}.
           </p>
         ) : null}
       </div>

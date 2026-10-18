@@ -177,8 +177,15 @@ describe('spoken', () => {
     ).toEqual(['NASA', 'B17']);
   });
   it('S5 double spaces', () => {
+    // The excerpt carries the neighbouring words, so its key names this gap (see acceptance tests).
     const f = spoken('One  two.', [], S)[0];
-    expect(f).toMatchObject({ rule: 'S5', start: 3, end: 5, fix: { replacement: ' ' } });
+    expect(f).toMatchObject({
+      rule: 'S5',
+      start: 0,
+      end: 9,
+      excerpt: 'One  two.',
+      fix: { replacement: 'One two.' },
+    });
   });
 });
 

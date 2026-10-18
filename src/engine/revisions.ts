@@ -1,5 +1,6 @@
 /** Revision history, suggestion application, undo/revert and the approval lock (spec 00). */
 import { normalizeText } from './text';
+import { isStorableText } from './workspace';
 import {
   DEFAULT_SETTINGS,
   LIMITS,
@@ -14,7 +15,8 @@ export type ChangeResult =
   | { ok: true; ws: Workspace }
   | {
       ok: false;
-      reason: 'approved' | 'stale' | 'limit' | 'unchanged' | 'too-long' | 'no-revision';
+      reason:
+        'approved' | 'stale' | 'limit' | 'unchanged' | 'too-long' | 'unstorable' | 'no-revision';
     };
 
 export const REASONS: Record<Exclude<ChangeResult, { ok: true }>['reason'], string> = {
@@ -23,6 +25,8 @@ export const REASONS: Record<Exclude<ChangeResult, { ok: true }>['reason'], stri
   limit: `The history is full (${LIMITS.revisions} revisions). Export the workspace and start a new one; the original is never dropped.`,
   unchanged: 'Nothing changed.',
   'too-long': `The script is longer than ${LIMITS.textChars.toLocaleString('en-US')} characters.`,
+  unstorable:
+    'The text contains a NUL character or a broken emoji/surrogate pair, which cannot be saved. Remove it and try again.',
   'no-revision': 'There is no script yet.',
 };
 
@@ -71,6 +75,7 @@ function push(
   if (ws.status === 'approved') return { ok: false, reason: 'approved' };
   if (ws.revisions.length >= LIMITS.revisions) return { ok: false, reason: 'limit' };
   if (text.length > LIMITS.textChars) return { ok: false, reason: 'too-long' };
+  if (!isStorableText(text) || !isStorableText(title)) return { ok: false, reason: 'unstorable' };
   if (cur.title === title && cur.text === text) return { ok: false, reason: 'unchanged' };
   const rev: Revision = { n: cur.n + 1, at, note: note.slice(0, 300), kind, title, text };
   return { ok: true, ws: { ...ws, revisions: [...ws.revisions, rev] } };

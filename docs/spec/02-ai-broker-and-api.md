@@ -5,8 +5,12 @@ calling an AI provider with a key that must never reach the browser, and keeping
 
 ## Opt-in and states
 
-- Off by default. The "AI explanations" panel shows one of: backend not reachable, AI not configured
-  on the backend, available (needs opt-in), opted in for this browser session.
+- Off by default. The "AI explanations" panel shows one of: not checked, backend not reachable, AI not
+  configured on the backend, available (needs opt-in), opted in for this browser session.
+- The panel checks `GET /api/capabilities` on its own only when the page itself is served from a
+  loopback host (development, local preview) or the user chose a backend address in Settings. On any
+  other host (the public static demo) it waits for "Check the local backend", so opening the demo
+  never makes the browser contact the visitor's machine.
 - The opt-in is per session (`sessionStorage`), never persisted, and every request carries the header
   `X-ScriptAudit-AI-Opt-In: session`. Without it the backend answers 403 `ai_opt_in_required`.
 - The panel sends only the selected findings (up to 8): rule, message, excerpt and the surrounding
@@ -29,13 +33,20 @@ The provider must answer with exactly one JSON object:
 ```
 
 - Unknown keys anywhere make the whole answer invalid (`502 ai_invalid_output`).
-- `findingKey` must be one of the keys sent; otherwise that recommendation is dropped and counted.
+- `findingKey` must be one of the keys sent, and at most one recommendation per key is kept; otherwise
+  that recommendation is dropped and counted.
 - `explanation`: 1 to 600 characters, no control characters.
 - `rewrite` is optional and is dropped (counted) when any of these holds: the finding is a grounding
   finding (the AI cannot make a statement true); `original` is not exactly the finding's excerpt;
   `replacement` is empty, longer than 3 times the excerpt plus 40 characters, or contains a claim tag,
-  a setup/payoff tag, a URL, a quotation mark that is not in the original, or a number that is not in
-  the original (no invented facts or citations).
+  a setup/payoff tag, a link (`http(s)://`, `www.`, `mailto:`, a Markdown link `](`, or a bare
+  domain such as `example.com`), or introduces anything not in the original: a quotation mark
+  (`"`, `“`, `”`, `‘`, `«`, `»`, `„`, `‚`, `‹`, `›`, `「`, `」`, or a straight `'` opening a quotation),
+  a number in digits, a spelled-out number (`two` to `ninety`, `hundred`, `thousand`, `million`,
+  `percent`, `half`, `twice`, `dozen`, ...), a superlative or absolute or attribution phrase from the
+  grounding lists, or a `the/its/their/... <word>est` superlative (no invented facts, claims or
+  citations). The rules are deliberately conservative: a dropped rewrite only loses a suggestion.
+  The browser applies the same rules again and counts its own drops in the total shown.
 - Kept rewrites become ordinary suggestions in the app, labelled "AI rewrite (unverified)". They go
   through the same diff preview, accept/reject and staleness check; applying one creates a revision of
   kind `ai-apply`. Nothing is applied automatically.

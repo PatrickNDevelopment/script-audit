@@ -46,6 +46,97 @@ SYSTEM_PROMPT: Final = (
 )
 
 NUMBER_RE: Final = re.compile(r"\d+(?:[.,]\d+)*%?")
+# Word lists mirror src/engine/rules.ts and src/engine/ai.ts; a rewrite may not introduce any of
+# them (no invented numbers, superlatives, attributions, quotations or links).
+SPELLED_NUMBERS: Final = tuple(
+    [
+        "million",
+        "millions",
+        "billion",
+        "billions",
+        "thousand",
+        "thousands",
+        "percent",
+        "half",
+        "twice",
+        "double",
+        "triple",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+        "hundred",
+        "hundreds",
+        "dozen",
+        "dozens",
+        "trillion",
+        "trillions",
+        "quarter",
+    ]
+)
+CLAIM_WORDS: Final = (
+    "first",
+    "the only",
+    "largest",
+    "biggest",
+    "smallest",
+    "the most",
+    "the least",
+    "best",
+    "worst",
+    "highest",
+    "lowest",
+    "fastest",
+    "slowest",
+    "oldest",
+    "newest",
+    "longest",
+    "shortest",
+    "record",
+    "never",
+    "always",
+    "according to",
+    "studies show",
+    "research shows",
+    "scientists",
+    "experts",
+    "data shows",
+    "reported",
+    "found that",
+    "proved",
+    "confirmed",
+)
+QUOTE_MARKS: Final = ('"', "“", "”", "‘", "«", "»", "„", "‚", "‹", "›", "「", "」")
+LINK_RE: Final = re.compile(
+    r"https?://|www\.|mailto:|\]\(|\b[a-z0-9-]+\.(?:com|org|net|io|gov|edu|info|co)\b",
+    re.IGNORECASE,
+)
+OPENING_SINGLE_RE: Final = re.compile(r"(?:^|[\s(\[])'(?=[^\W\d_])")
+SUPERLATIVE_EST_RE: Final = re.compile(
+    r"(?:^|[^\w])(?:the|its|their|our|his|her|my|your)\s+([^\W\d_]+est)(?=$|[^\w])", re.IGNORECASE
+)
 AuditName = Literal["grounding", "narrative", "spoken", "packaging"]
 
 
@@ -221,8 +312,18 @@ def _has_control(text: str) -> bool:
     return any(ord(ch) < 0x20 and ch not in "\n\t\r" for ch in text)
 
 
+def _words(text: str, words: tuple[str, ...]) -> set[str]:
+    lower = text.lower()
+    found: set[str] = set()
+    for w in words:
+        esc = re.escape(w).replace("'", "['’]")
+        if re.search(rf"(?:^|[^\w])({esc})(?=$|[^\w])", lower):
+            found.add(w)
+    return found
+
+
 def rewrite_problem(finding: FindingIn, rewrite: Rewrite) -> str | None:
-    """Why a rewrite is refused, or None (the same rules as the browser)."""
+    """Why a rewrite is refused, or None (the same rules as the browser, src/engine/ai.ts)."""
     original, replacement = rewrite.original, rewrite.replacement
     if finding.audit == "grounding":
         return "grounding"
@@ -236,13 +337,22 @@ def rewrite_problem(finding: FindingIn, rewrite: Rewrite) -> str | None:
         return "claim_tag"
     if re.search(r"\{(setup|payoff):", replacement, flags=re.IGNORECASE):
         return "story_tag"
-    if re.search(r"https?://|www\.", replacement, flags=re.IGNORECASE):
+    if LINK_RE.search(replacement):
         return "link"
-    for q in ('"', "“", "”"):
+    for q in QUOTE_MARKS:
         if q in replacement and q not in original:
             return "quotation"
+    if OPENING_SINGLE_RE.search(replacement) and not OPENING_SINGLE_RE.search(original):
+        return "quotation"
     if not _numbers(replacement) <= _numbers(original):
         return "number"
+    if not _words(replacement, SPELLED_NUMBERS) <= _words(original, SPELLED_NUMBERS):
+        return "number"
+    if not _words(replacement, CLAIM_WORDS) <= _words(original, CLAIM_WORDS):
+        return "new_claim"
+    est = {m.lower() for m in SUPERLATIVE_EST_RE.findall(replacement)}
+    if not est <= {m.lower() for m in SUPERLATIVE_EST_RE.findall(original)}:
+        return "new_claim"
     return None
 
 
@@ -343,11 +453,14 @@ class AiService:
         by_key = {f.key: f for f in body.findings}
         kept: list[dict[str, Any]] = []
         dropped = 0
+        seen: set[str] = set()
         for rec in parsed.recommendations:
             finding = by_key.get(rec.findingKey)
-            if finding is None or _has_control(rec.explanation):
+            # One recommendation per finding: a second answer for the same key is dropped.
+            if finding is None or _has_control(rec.explanation) or rec.findingKey in seen:
                 dropped += 1
                 continue
+            seen.add(rec.findingKey)
             out: dict[str, Any] = {"findingKey": rec.findingKey, "explanation": rec.explanation}
             if rec.rewrite is not None:
                 if rewrite_problem(finding, rec.rewrite) is None:

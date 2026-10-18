@@ -218,8 +218,22 @@ export function analyze(text: string): Analysis {
   return { text, masked, sections, beats, sentences, words };
 }
 
+/** Words inside `r`. `a.words` is sorted by offset, so a binary search finds the first one. */
 export function wordsIn(a: Analysis, r: Range): Word[] {
-  return a.words.filter((w) => w.start >= r.start && w.end <= r.end);
+  const ws = a.words;
+  let lo = 0;
+  let hi = ws.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((ws[mid] as Word).start < r.start) lo = mid + 1;
+    else hi = mid;
+  }
+  const out: Word[] = [];
+  for (let i = lo; i < ws.length && (ws[i] as Word).start < r.end; i += 1) {
+    const w = ws[i] as Word;
+    if (w.end <= r.end) out.push(w);
+  }
+  return out;
 }
 
 export function countWords(masked: string): number {

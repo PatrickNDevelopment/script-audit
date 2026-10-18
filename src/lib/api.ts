@@ -6,6 +6,17 @@ export type Capabilities =
   | { kind: 'disabled' }
   | { kind: 'enabled'; provider: string; model: string; callsPerHour: number };
 
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+/**
+ * Whether the AI panel may contact the backend without a click. A page served from this computer
+ * (development, local preview) may; the public static demo only does after the user asks, so
+ * opening it never makes the browser probe the visitor's own machine.
+ */
+export function autoCheckBackend(pageHostname: string, addressSaved: boolean): boolean {
+  return addressSaved || LOOPBACK.has(pageHostname.toLowerCase());
+}
+
 export function normalizeBackendUrl(raw: string): string | null {
   const t = raw.trim().replace(/\/+$/, '');
   try {
@@ -60,7 +71,7 @@ export async function capabilities(base: string): Promise<Capabilities> {
       kind: 'enabled',
       provider: String(ai.provider ?? ''),
       model: String(ai.model ?? ''),
-      callsPerHour: Number(ai.limits?.callsPerHour ?? 0),
+      callsPerHour: Number.isInteger(ai.limits?.callsPerHour) ? Number(ai.limits?.callsPerHour) : 0,
     };
   } catch {
     return { kind: 'offline', message: `No backend is reachable at ${base}.` };

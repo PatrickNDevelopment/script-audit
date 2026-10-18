@@ -126,7 +126,7 @@ export function App() {
     change(
       r,
       r.ok
-        ? `Applied ${s.label}. Revision ${current(r.ws)?.n} created; use Undo in History to go back.`
+        ? `Applied ${s.label.replace(/\.+$/, '')}. Revision ${current(r.ws)?.n} created; use Undo in History to go back.`
         : '',
     );
   }

@@ -20,3 +20,11 @@
 - **Static demo**: the hosted build (once published) has no backend, so AI explanations show as
   unavailable there.
 - CI and the Pages workflow exist but have never run, because the repository has no remote.
+- **AI rewrite filter is conservative.** A rewrite is dropped when it introduces any number (digits
+  or words such as "three"), superlative, attribution, quotation mark or link. That also drops some
+  harmless rewrites; explanations are still shown. Explanations themselves are free text marked
+  "AI, unverified" and can mention things that are not in the script.
+- **History table on very narrow screens** (320 px) scrolls sideways inside its own frame to reach
+  the Compare, Revert and Download buttons; the page itself does not scroll sideways.
+- **The public static demo** does not contact `127.0.0.1` until you click "Check the local backend";
+  a backend only answers pages whose origin is listed in `SCRIPT_AUDIT_CORS_ORIGINS`.

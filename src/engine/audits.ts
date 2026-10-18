@@ -74,8 +74,22 @@ export function numbersIn(s: string): string[] {
 // ---------------------------------------------------------------------------------------------
 // 1. Grounding
 
+/**
+ * "First" as a discourse marker ("First, ...", "at first", "first of all") orders the telling and
+ * claims nothing, so it is blanked (same length) before superlatives are looked for.
+ */
+export function withoutDiscourseFirst(lower: string): string {
+  const blank = (m: string) => ' '.repeat(m.length);
+  return lower
+    .replace(/^(\s*)first(?=\s*,)/, (m) => blank(m))
+    .replace(
+      /(^|[^\p{L}\p{N}])(at first|first of all|first and foremost|first things first|first off)(?=$|[^\p{L}\p{N}])/gu,
+      (_m, pre: string, w: string) => pre + blank(w),
+    );
+}
+
 export function assertionTriggers(maskedSentence: string): string[] {
-  const lower = maskedSentence.toLowerCase();
+  const lower = withoutDiscourseFirst(maskedSentence.toLowerCase());
   const out: string[] = [];
   for (const m of maskedSentence.matchAll(NUMBER_RE)) out.push(m[0]);
   for (const w of NUMBER_WORDS) if (hasPhrase(lower, w)) out.push(w);
@@ -145,7 +159,7 @@ export function grounding(text: string, claims: readonly Claim[]): GroundingResu
     const claimText = supported.flatMap((c) => [c.statement, ...c.sources.map((x) => x.quote)]);
     const known = new Set(claimText.flatMap(numbersIn));
     const knownLower = claimText.join('\n').toLowerCase();
-    const sentenceLower = a.masked.slice(s.start, s.end).toLowerCase();
+    const sentenceLower = withoutDiscourseFirst(a.masked.slice(s.start, s.end).toLowerCase());
     const missing = [
       ...numbersIn(a.masked.slice(s.start, s.end)).filter((n) => !known.has(n)),
       ...[...SUPERLATIVES, ...NUMBER_WORDS].filter(
@@ -436,26 +450,23 @@ export function spoken(
 
   // S2 repeated content words within 40 words (per section).
   for (const sec of a.sections) {
-    const ws = a.words.filter(
-      (w) => w.start >= sec.start && w.end <= sec.end && isContent(w.lower, 4),
-    );
-    const all = a.words.filter((w) => w.start >= sec.start && w.end <= sec.end);
-    const idx = new Map(all.map((w, i) => [w.start, i]));
+    const all = wordsIn(a, sec);
     const lastReport = new Map<string, number>();
-    ws.forEach((w) => {
-      const i = idx.get(w.start) as number;
-      const same = ws.filter(
-        (x) =>
-          x.lower === w.lower &&
-          (idx.get(x.start) as number) <= i &&
-          (idx.get(x.start) as number) > i - 40,
-      );
-      if (same.length < 3) return;
+    // Per word, the positions (in `all`) of its recent uses: a sliding 40-word window, so the
+    // audit stays linear on a long section.
+    const recent = new Map<string, number[]>();
+    all.forEach((w, i) => {
+      if (!isContent(w.lower, 4)) return;
+      const list = recent.get(w.lower) ?? [];
+      list.push(i);
+      while ((list[0] as number) <= i - 40) list.shift();
+      recent.set(w.lower, list);
+      if (list.length < 3) return;
       const last = lastReport.get(w.lower);
       if (last !== undefined && last > i - 40) return;
       lastReport.set(w.lower, i);
       out.push(
-        draft(a, 'S2', w, `"${w.text}" is used ${same.length} times within 40 words.`, {
+        draft(a, 'S2', w, `"${w.text}" is used ${list.length} times within 40 words.`, {
           triggers: [w.lower],
         }),
       );
@@ -480,12 +491,24 @@ export function spoken(
     );
   }
 
-  // S5 double spaces between words.
+  // S5 double spaces between words. The excerpt includes the neighbouring words, so the finding
+  // key (`rule|excerpt|k`) names this gap and a rejection stays on it when another gap is fixed.
   for (const m of text.matchAll(/(?<=\S) {2,}(?=\S)/g)) {
-    const start = m.index ?? 0;
+    const gap = m.index ?? 0;
+    const before = /\S{1,40}$/u.exec(text.slice(Math.max(0, gap - 40), gap))?.[0] ?? '';
+    const after =
+      /^\S{1,40}/u.exec(text.slice(gap + m[0].length, gap + m[0].length + 40))?.[0] ?? '';
+    let start = gap - before.length;
+    let end = gap + m[0].length + after.length;
+    // Never cut a surrogate pair at the 40-character limit.
+    if (/[\udc00-\udfff]/.test(text.charAt(start))) start += 1;
+    if (/[\ud800-\udbff]/.test(text.charAt(end - 1))) end -= 1;
     out.push(
-      draft(a, 'S5', { start, end: start + m[0].length }, 'Double space.', {
-        fix: { replacement: ' ', note: 'Replace with one space.' },
+      draft(a, 'S5', { start, end }, 'Double space.', {
+        fix: {
+          replacement: `${text.slice(start, gap)} ${text.slice(gap + m[0].length, end)}`,
+          note: 'Replace with one space.',
+        },
       }),
     );
   }
@@ -554,16 +577,21 @@ export function packaging(title: string, text: string, claims: readonly Claim[])
     if (hasPhrase(titleLower, s.phrase)) {
       let fix: Draft['fix'] = null;
       if (s.neutral) {
-        const re = new RegExp(s.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        // The same word boundaries as hasPhrase, so "insane" never matches inside "insanely".
+        const re = new RegExp(
+          `(^|[^\\p{L}\\p{N}])(${s.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]")})(?=$|[^\\p{L}\\p{N}])`,
+          'iu',
+        );
         const m = re.exec(title);
-        if (m)
+        if (m) {
+          const at = m.index + (m[1] ?? '').length;
+          const found = m[2] ?? '';
           fix = {
             replacement:
-              title.slice(0, m.index) +
-              matchCase(m[0], s.neutral) +
-              title.slice(m.index + m[0].length),
-            note: `"${m[0]}" → "${matchCase(m[0], s.neutral)}"`,
+              title.slice(0, at) + matchCase(found, s.neutral) + title.slice(at + found.length),
+            note: `"${found}" → "${matchCase(found, s.neutral)}"`,
           };
+        }
       }
       out.push(
         titleDraft('P2', `Sensational phrase in the title: "${s.phrase}".`, {

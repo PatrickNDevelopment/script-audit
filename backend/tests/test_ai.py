@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
-from script_audit.ai import FindingIn, Rewrite, parse_provider_text, rewrite_problem
+from script_audit.ai import (
+    AiService,
+    ExplainIn,
+    FindingIn,
+    Rewrite,
+    parse_provider_text,
+    rewrite_problem,
+)
 from script_audit.errors import AppError
+from script_audit.store import Store, migrate
 
-from .conftest import OPT_IN, finding
+from .conftest import OPT_IN, finding, make_settings
 
 
 def explain(c: TestClient, *findings: dict[str, object]) -> dict[str, object]:
@@ -100,3 +111,51 @@ def test_fenced_json_is_accepted_but_extra_keys_are_not() -> None:
         )
     with pytest.raises(AppError):
         parse_provider_text('{"recommendations": [{"findingKey": "k", "explanation": ""}]}')
+
+
+def test_rewrites_that_add_spelled_numbers_claims_quotes_or_links_are_dropped() -> None:
+    """Acceptance review 06B: the first rule set let these through."""
+    ex = "The tower is tall, and it is old."
+    f = FindingIn(**finding(f"S1|{ex}|0", excerpt=ex))
+
+    def p(replacement: str) -> str | None:
+        return rewrite_problem(f, Rewrite(original=ex, replacement=replacement))
+
+    assert p("The tower is tall. It is old.") is None
+    assert p("The tower is tall. It is three million years old.") == "number"
+    assert p("The tower is tall. It is twice as old.") == "number"
+    assert p("According to experts, the tower is tall. It is old.") == "new_claim"
+    assert p("The tower is the tallest. It is old.") == "new_claim"
+    assert p("The tower is tall. It is the first.") == "new_claim"
+    assert p("The tower is tall. It is ‘old’, they say.") == "quotation"
+    assert p("The tower is tall. It is «old».") == "quotation"
+    assert p("The tower is tall. It is 'old', they say.") == "quotation"
+    assert p("The tower is tall. See [here](example.com).") == "link"
+    assert p("The tower is tall. See example.org.") == "link"
+    assert p("The tower’s tall. It’s old.") is None  # apostrophes are not quotations
+
+
+class _DuplicateProvider:
+    name = "stub"
+    model = "stub-model"
+
+    def complete(self, system: str, user: str) -> str:
+        del system, user
+        key = "S1|One, two three four.|0"
+        return json.dumps(
+            {
+                "recommendations": [
+                    {"findingKey": key, "explanation": "First answer."},
+                    {"findingKey": key, "explanation": "Second answer for the same finding."},
+                ]
+            }
+        )
+
+
+def test_a_second_answer_for_the_same_finding_is_dropped(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    migrate(settings.db_path)
+    service = AiService(settings, _DuplicateProvider(), Store(settings.db_path), lambda: "t")
+    out = service.explain(True, ExplainIn(findings=[FindingIn(**finding())]))
+    assert [r["explanation"] for r in out["recommendations"]] == ["First answer."]
+    assert out["meta"]["dropped"] == 1

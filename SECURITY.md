@@ -1,16 +1,17 @@
 # Security notes
 
 The browser app has no server, no accounts and no network calls except to the optional local
-backend address you configure. The backend binds to 127.0.0.1 and has no authentication by design;
+backend address you configure. Served from any host other than loopback (the public static demo), it
+does not contact that address until you click "Check the local backend" or save an address. The backend binds to 127.0.0.1 and has no authentication by design;
 do not expose it.
 
-| Input                   | Treated as                                                                                                                                          |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Markdown / text import  | Untrusted. 2 MB cap, NUL bytes refused, 200,000-character script cap; rendered as text, never as HTML.                                              |
-| Workspace JSON          | Untrusted. 20 MB cap, strict zod schema (unknown keys rejected), revision numbering, duplicate ids, http(s) URLs.                                   |
-| `localStorage` contents | Untrusted. Re-validated on load; an unreadable copy is kept aside and offered as a download.                                                        |
-| Claim URLs              | Shown as links only when `http`/`https`, with `rel="noopener noreferrer nofollow"`; never fetched.                                                  |
-| AI provider output      | Untrusted, twice: strict schema on the backend and again in the browser; rewrites that add numbers, quotes, links, claim or story tags are dropped. |
+| Input                   | Treated as                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Markdown / text import  | Untrusted. 2 MB cap, NUL bytes refused, 200,000-character script cap; rendered as text, never as HTML.                                                                                            |
+| Workspace JSON          | Untrusted. 20 MB cap, strict zod schema (unknown keys rejected), revision numbering, duplicate ids, http(s) URLs.                                                                                 |
+| `localStorage` contents | Untrusted. Re-validated on load; an unreadable copy is kept aside and offered as a download.                                                                                                      |
+| Claim URLs              | Shown as links only when `http`/`https`, with `rel="noopener noreferrer nofollow"`; never fetched.                                                                                                |
+| AI provider output      | Untrusted, twice: strict schema on the backend and again in the browser; rewrites that add numbers (digits or words), superlatives, attributions, quotes, links, claim or story tags are dropped. |
 
 ## Backend
 
