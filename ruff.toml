@@ -1,0 +1,11 @@
+line-length = 100
+src = ["backend"]
+target-version = "py311"
+extend-exclude = ["data", ".venv"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N", "S"]
+ignore = ["S101", "S603", "S607"]
+
+[lint.per-file-ignores]
+"backend/tests/*" = ["S", "N", "E501"]

@@ -1,0 +1,48 @@
+{
+  "name": "script-audit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Editorial review workbench: four deterministic script audits, accept/reject suggestions with diffs and exact undo.",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite --port 5177 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4178 --strictPort",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "secrets": "node scripts/secret-scan.mjs",
+    "backend:lint": "node scripts/py.mjs -m ruff check backend",
+    "backend:format": "node scripts/py.mjs -m ruff format --check backend",
+    "backend:types": "node scripts/py.mjs -m mypy --strict backend/script_audit",
+    "backend:test": "node scripts/py.mjs -m pytest backend -q",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run backend:lint && npm run backend:format && npm run backend:types && npm run backend:test && npm run build && npm run secrets && npm run e2e"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}
