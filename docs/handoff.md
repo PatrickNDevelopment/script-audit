@@ -1,7 +1,9 @@
 # Handoff
 
-**State:** v0.1 built locally on branch `phase/06a-build`. Not pushed, not deployed, no remote.
-Registry status `in_progress` until an independent acceptance review (prompt 06B) passes.
+**State:** v0.1 on branch `phase/06a-build`, independently accepted (prompt 06B, 2026-10-18): the
+reviewer fixed nine defects with regression tests (commit `0147e37`, see docs/test-report.md Part 1)
+and re-ran the full gate (exit 0). Not pushed, not deployed, no remote. The lead engineer updates the
+registry after re-running the evidence.
 
 ## Run
 
@@ -30,15 +32,22 @@ For the AI path without a real provider, start the backend with `SCRIPT_AUDIT_AI
 
 ## What is disabled or absent
 
-- No AI provider is configured by default; the static build shows the AI panel as unavailable.
+- No AI provider is configured by default. Served from loopback the AI panel checks the backend on
+  its own; on any other host (the static demo) it shows "Not checked" until the user clicks.
 - No hosted demo; CI and Pages workflows have never run (no remote).
 - Backlog: SourceTrace import, voiceover timing alignment (docs/backlog.md).
 
 ## Release blockers before publication
 
-1. Independent acceptance review (06B).
-2. Owner review and explicit approval to publish.
-3. First CI run on Linux.
+1. Owner review (README, screenshots, limitations, licence, secrets scan) and explicit approval to
+   publish.
+2. First CI run on Linux after the push.
+
+## Next step
+
+Lead engineer: re-run `scriptserify.ps1` (expect 64 unit, 31 pytest, 13 e2e, `ALL CHECKS PASSED`),
+then move the registry entry to `ready_for_publication_review` if it agrees with Part 1 of
+docs/test-report.md.
 
 ## Gotchas
 
@@ -48,5 +57,7 @@ For the AI path without a real provider, start the backend with `SCRIPT_AUDIT_AI
   UI changed.
 - `examples/` is excluded from Prettier on purpose: `draft.md` contains a double space the demo
   relies on.
+- The AI rewrite rules exist twice (`src/engine/ai.ts` and `backend/script_audit/ai.py`); keep the
+  word lists in step.
 - Changing `src/engine/sample.ts` changes journey 2 numbers (coverage 1 of 10); unit and e2e tests pin
   them.
