@@ -45,7 +45,7 @@ For the AI path without a real provider, start the backend with `SCRIPT_AUDIT_AI
 
 ## Next step
 
-Lead engineer: re-run `scriptserify.ps1` (expect 64 unit, 31 pytest, 13 e2e, `ALL CHECKS PASSED`),
+Lead engineer: re-run `scripts\verify.ps1` (expect 64 unit, 31 pytest, 13 e2e, `ALL CHECKS PASSED`),
 then move the registry entry to `ready_for_publication_review` if it agrees with Part 1 of
 docs/test-report.md.
 
