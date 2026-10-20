@@ -2,7 +2,7 @@
 
 **State:** v0.1 on branch `phase/06a-build`, independently accepted (prompt 06B, 2026-10-18): the
 reviewer fixed nine defects with regression tests (commit `0147e37`, see docs/test-report.md Part 1)
-and re-ran the full gate (exit 0). Not pushed, not deployed, no remote. The lead engineer updates the
+and re-ran the full gate (exit 0). Published 2026-10-19: https://github.com/PatrickNDevelopment/script-audit (branch `main`), demo https://patrickndevelopment.github.io/script-audit/; CI and Pages green on the first run. The lead engineer updates the
 registry after re-running the evidence.
 
 ## Run
@@ -34,20 +34,20 @@ For the AI path without a real provider, start the backend with `SCRIPT_AUDIT_AI
 
 - No AI provider is configured by default. Served from loopback the AI panel checks the backend on
   its own; on any other host (the static demo) it shows "Not checked" until the user clicks.
-- No hosted demo; CI and Pages workflows have never run (no remote).
+- Hosted demo: https://patrickndevelopment.github.io/script-audit/ (static build). CI and Pages ran green on the first push (2026-10-19).
 - Backlog: SourceTrace import, voiceover timing alignment (docs/backlog.md).
 
-## Release blockers before publication
+## Publication
 
-1. Owner review (README, screenshots, limitations, licence, secrets scan) and explicit approval to
-   publish.
-2. First CI run on Linux after the push.
+Published 2026-10-19 with the owner's approval (portfolio decision D-007): public repository
+https://github.com/PatrickNDevelopment/script-audit (MIT, branch `main`), GitHub Pages at https://patrickndevelopment.github.io/script-audit/. The
+first CI run (Linux, Chromium) and Pages deployment were green; a live check loaded the demo,
+refreshed it and found no console errors and no requests to localhost.
 
-## Next step
+## Next action
 
-Lead engineer: re-run `scripts\verify.ps1` (expect 64 unit, 31 pytest, 13 e2e, `ALL CHECKS PASSED`),
-then move the registry entry to `ready_for_publication_review` if it agrees with Part 1 of
-docs/test-report.md.
+None required for v0.1; ideas are in `docs/backlog.md`. The portfolio's final cross-project audit
+(prompt 13) is next.
 
 ## Gotchas
 

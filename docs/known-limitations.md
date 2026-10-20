@@ -19,7 +19,7 @@
   provider and a mocked HTTP transport, not against a live provider.
 - **Static demo**: the hosted build (once published) has no backend, so AI explanations show as
   unavailable there.
-- CI and the Pages workflow exist but have never run, because the repository has no remote.
+- **Published 2026-10-19.** CI (Linux, Chromium) and the Pages deploy were green on the first run.
 - **AI rewrite filter is conservative.** A rewrite is dropped when it introduces any number (digits
   or words such as "three"), superlative, attribution, quotation mark or link. That also drops some
   harmless rewrites; explanations are still shown. Explanations themselves are free text marked

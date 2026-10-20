@@ -8,7 +8,7 @@ is always recoverable.
 
 ![ScriptAudit audits view on desktop](docs/screenshots/audits-desktop.png)
 
-> **Status:** v0.1, built and tested locally. It is **not published or deployed**; run it locally
+> **Status:** v0.1, published. **[Try the demo](https://patrickndevelopment.github.io/script-audit/)** (static; the optional local AI backend is not part of it) or run it locally
 > (below). ScriptAudit does **not** verify facts and does **not** predict views, click-through or
 > retention. Its checks are transparent writing rules.
 
