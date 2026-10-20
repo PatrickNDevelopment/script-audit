@@ -28,3 +28,8 @@
   the Compare, Revert and Download buttons; the page itself does not scroll sideways.
 - **The public static demo** does not contact `127.0.0.1` until you click "Check the local backend";
   a backend only answers pages whose origin is listed in `SCRIPT_AUDIT_CORS_ORIGINS`.
+- **Shared browser storage on the demo site.** All ten portfolio demos are served from
+  `patrickndevelopment.github.io`, so they share one browser storage quota (about 5 MB). Each app
+  uses its own `script-audit.*` keys and only reacts to changes of its own keys, but a very large workspace
+  in one demo can make saving fail in another (the app then shows its save-failed notice). A local
+  run has its own origin and is not affected.
