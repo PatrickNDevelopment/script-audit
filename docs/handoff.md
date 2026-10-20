@@ -1,9 +1,9 @@
 # Handoff
 
-**State:** v0.1 on branch `phase/06a-build`, independently accepted (prompt 06B, 2026-10-18): the
-reviewer fixed nine defects with regression tests (commit `0147e37`, see docs/test-report.md Part 1)
-and re-ran the full gate (exit 0). Published 2026-10-19: https://github.com/PatrickNDevelopment/script-audit (branch `main`), demo https://patrickndevelopment.github.io/script-audit/; CI and Pages green on the first run. The lead engineer updates the
-registry after re-running the evidence.
+**State:** v0.1, accepted by an independent review (prompt 06B, 2026-10-18) that fixed nine defects with regression tests (see Part 1 / "Independent acceptance" in
+[test-report.md](test-report.md)). Published 2026-10-19: https://github.com/PatrickNDevelopment/script-audit, branch `main`; demo
+https://patrickndevelopment.github.io/script-audit/. CI and Pages are green; the final cross-portfolio audit (2026-10-20) found no
+P0 or P1 issue. The reviews were separate Claude Code sessions, not human audits.
 
 ## Run
 
